@@ -13,7 +13,7 @@
             text-align: center;
         }
         .chart {
-            width: 600px;
+            width: 800px;
             height: 400px;
             margin: 50px auto;
         }
@@ -34,35 +34,36 @@
     </style>
 </head>
 <body>
-    <h1>Model Performance Comparison</h1>
+    <h1>Top 20 Model Performance Comparison</h1>
     
     <!-- Area to show the charts -->
     <div id="performanceChart" class="chart"></div>
     <div id="modelDetails" class="model-info"></div>
 
     <script>
-        // Sample data (you would replace this with actual data from your XML)
-        const models = [
-            {name: "Cubic", modelType: "Cubic", targetVariable: "Adada", independentVariables: "(Ajali, Imo)", r2: 0.978, nse: 0.90, rmse: 0.10, formula: "formula_expression_1"},
-            {name: "Cubic", modelType: "Cubic", targetVariable: "Adada", independentVariables: "(Ajali, Imo)", r2: 0.92, nse: 0.89, rmse: 0.15, formula: "formula_expression_2"},
-            {name: "Random Forest", modelType: "Random Forest", targetVariable: "Adada", independentVariables: "(Ajali, Imo, Otamiri)", r2: 0.87, nse: 0.84, rmse: 0.25, formula: "formula_expression_3"},
-            {name: "Random Forest", modelType: "Random Forest", targetVariable: "Adada", independentVariables: "(Ajali, Ivo)", r2: 0.80, nse: 0.77, rmse: 0.35, formula: "formula_expression_4"},
-            {name: "Quadratic", modelType: "Quadratic", targetVariable: "Adada", independentVariables: "(Imo, Otamiri)", r2: 0.91, nse: 0.88, rmse: 0.18, formula: "formula_expression_5"},
-            // Add more models as needed...
-        ];
+        // Flask에서 전달된 models 데이터를 사용
+        const models = {{ models | tojson }};
 
-        // Function to create bar charts
-        function createBarChart(data, chartId, title) {
+        // Sort models based on R², CPI, NSE, RMSE
+        models.sort((a, b) => {
+            if (b.r2 !== a.r2) return b.r2 - a.r2; // Sort by R² (highest first)
+            if (a.cpi !== b.cpi) return a.cpi - b.cpi; // Sort by CPI (lowest first)
+            if (b.nse !== a.nse) return b.nse - a.nse; // Sort by NSE (highest first)
+            return a.rmse - b.rmse; // Sort by RMSE (lowest first)
+        });
+
+        // Function to create bar charts for each metric
+        function createBarChart(data, chartId, title, metric) {
             const margin = { top: 20, right: 30, bottom: 40, left: 40 };
-            const width = 600 - margin.left - margin.right;
+            const width = 800 - margin.left - margin.right;
             const height = 400 - margin.top - margin.bottom;
 
-            const x = d3.scaleBand().domain(data.map(d => d.name + " " + d.modelType)).range([0, width]).padding(0.1);
-            const y = d3.scaleLinear().domain([0, d3.max(data, d => d.r2)]).nice().range([height, 0]);
+            const x = d3.scaleBand().domain(data.map(d => `${d.name} ${d.modelType}`)).range([0, width]).padding(0.1);
+            const y = d3.scaleLinear().domain([0, d3.max(data, d => d[metric])]).nice().range([height, 0]);
 
             const colorScale = d3.scaleOrdinal()
                 .domain(["Cubic", "Random Forest", "Quadratic"])
-                .range(["red", "blue", "green"]); // Different colors for different model types
+                .range(["red", "blue", "green"]);
 
             const svg = d3.select(chartId)
                 .append('svg')
@@ -83,10 +84,10 @@
                 .enter()
                 .append('rect')
                 .attr('class', 'bar')
-                .attr('x', d => x(d.name + " " + d.modelType))
-                .attr('y', d => y(d.r2))
+                .attr('x', d => x(`${d.name} ${d.modelType}`))
+                .attr('y', d => y(d[metric]))
                 .attr('width', x.bandwidth())
-                .attr('height', d => height - y(d.r2))
+                .attr('height', d => height - y(d[metric]))
                 .style('fill', d => colorScale(d.modelType));
 
             svg.append('g')
@@ -110,11 +111,15 @@
                 <div><strong>R²:</strong> ${model.r2}</div>
                 <div><strong>NSE:</strong> ${model.nse}</div>
                 <div><strong>RMSE:</strong> ${model.rmse}</div>
+                <div><strong>CPI:</strong> ${model.cpi}</div>
             `);
         }
 
-        // Create the chart with top 20 models (use slice to limit to top 20)
-        createBarChart(models.slice(0, 20), '#performanceChart', 'Model Performance (Top 20)');
+        // Create the charts for each metric (Top 20 models for each metric)
+        createBarChart(models.slice(0, 20), '#performanceChart', 'Top 20 Models Sorted by R², CPI, NSE, and RMSE', 'r2');
+        createBarChart(models.slice(0, 20), '#performanceChart', 'Top 20 Models Sorted by R², CPI, NSE, and RMSE', 'cpi');
+        createBarChart(models.slice(0, 20), '#performanceChart', 'Top 20 Models Sorted by R², CPI, NSE, and RMSE', 'nse');
+        createBarChart(models.slice(0, 20), '#performanceChart', 'Top 20 Models Sorted by R², CPI, NSE, and RMSE', 'rmse');
 
         // Display details for the first model as an example
         showModelDetails(models[0]);
