@@ -37,7 +37,8 @@
     <h1>Top 20 Models Sorted by CPI</h1>
     
     <!-- Area to show the charts -->
-    <div id="performanceChart" class="chart"></div>
+    <div id="performanceChartR2" class="chart"></div>
+    <div id="performanceChartCPI" class="chart"></div>
     <div id="modelDetails" class="model-info"></div>
 
     <script>
@@ -61,13 +62,13 @@
         });
 
         // Function to create bar charts
-        function createBarChart(data, chartId, title) {
+        function createBarChart(data, chartId, title, yAccessor, yLabel) {
             const margin = { top: 20, right: 30, bottom: 40, left: 40 };
             const width = 800 - margin.left - margin.right;
             const height = 400 - margin.top - margin.bottom;
 
             const x = d3.scaleBand().domain(data.map(d => d.rank)).range([0, width]).padding(0.1);
-            const y = d3.scaleLinear().domain([0, d3.max(data, d => d.r2)]).nice().range([height, 0]);
+            const y = d3.scaleLinear().domain([0, d3.max(data, yAccessor)]).nice().range([height, 0]);
 
             const colorScale = d3.scaleOrdinal()
                 .domain(["Cubic", "Random Forest", "Quadratic"])
@@ -93,9 +94,9 @@
                 .append('rect')
                 .attr('class', 'bar')
                 .attr('x', d => x(d.rank))
-                .attr('y', d => y(d.r2))
+                .attr('y', d => y(yAccessor(d)))
                 .attr('width', x.bandwidth())
-                .attr('height', d => height - y(d.r2))
+                .attr('height', d => height - y(yAccessor(d)))
                 .style('fill', d => colorScale(d.model_type));
 
             svg.append('g')
@@ -111,6 +112,15 @@
             svg.append('g')
                 .attr('class', 'y-axis')
                 .call(d3.axisLeft(y));
+
+            // Add y-axis label
+            svg.append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('y', 0 - margin.left)
+                .attr('x', 0 - (height / 2))
+                .attr('dy', '1em')
+                .style('text-anchor', 'middle')
+                .text(yLabel);
         }
 
         // Update model details section for all top 20 models
@@ -135,7 +145,8 @@
         }
 
         // Create the chart with top 20 models (use slice to limit to top 20)
-        createBarChart(models.slice(0, 20), '#performanceChart', 'Top 20 Models Sorted by CPI');
+        createBarChart(models.slice(0, 20), '#performanceChartR2', 'Top 20 Models Sorted by CPI (R²)', d => d.r2, 'R²');
+        createBarChart(models.slice(0, 20), '#performanceChartCPI', 'Top 20 Models Sorted by CPI (CPI)', d => d.cpi, 'CPI');
 
         // Display details for all top 20 models
         showModelDetails(models.slice(0, 20));
