@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model Performance Visualization</title>
+    <title>Top 20 Models Sorted by CPI</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body {
@@ -41,33 +41,9 @@
     <div id="modelDetails" class="model-info"></div>
 
     <script>
-        // Sample data (You would replace this with actual XML data)
-        const models = [
-            { name: "Cubic", modelType: "Cubic", targetVariable: "Adada", independentVariables: "(Ajali, Imo)", r2: 0.978, nse: 0.90, rmse: 0.10, cpi: 0.12, formula: "formula_expression_1" },
-            { name: "Random Forest", modelType: "Random Forest", targetVariable: "Adada", independentVariables: "(Ajali, Imo, Otamiri)", r2: 0.89, nse: 0.85, rmse: 0.14, cpi: 0.11, formula: "formula_expression_2" },
-            { name: "Quadratic", modelType: "Quadratic", targetVariable: "Adada", independentVariables: "(Ajali, Imo)", r2: 0.91, nse: 0.88, rmse: 0.15, cpi: 0.13, formula: "formula_expression_3" },
-            { name: "Random Forest", modelType: "Random Forest", targetVariable: "Adada", independentVariables: "(Ajali, Ivo)", r2: 0.87, nse: 0.81, rmse: 0.18, cpi: 0.09, formula: "formula_expression_4" },
-            { name: "Cubic", modelType: "Cubic", targetVariable: "Adada", independentVariables: "(Ajali, Ivo)", r2: 0.92, nse: 0.90, rmse: 0.12, cpi: 0.14, formula: "formula_expression_5" },
-            { name: "Random Forest", modelType: "Random Forest", targetVariable: "Adada", independentVariables: "(Ajali, Ivo, Otamiri)", r2: 0.88, nse: 0.84, rmse: 0.16, cpi: 0.08, formula: "formula_expression_6" },
-            // Add more models if needed...
-        ];
-
-        // Sort models based on CPI (lowest first)
-        models.sort((a, b) => a.cpi - b.cpi);  // Sort by CPI (ascending)
-
-        // Add model ranks (1st, 2nd, etc.)
-        models.slice(0, 20).forEach((model, index) => {
-            if (index === 0) {
-                model.rank = `${model.name}_${index + 1}st`;
-            } else if (index === 1) {
-                model.rank = `${model.name}_${index + 1}nd`;
-            } else if (index === 2) {
-                model.rank = `${model.name}_${index + 1}rd`;
-            } else {
-                model.rank = `${model.name}_${index + 1}th`;
-            }
-        });
-
+        // Flask에서 전달된 모델 데이터를 받기
+        const models = {{ models | tojson }};
+        
         // Function to create bar charts
         function createBarChart(data, chartId, title) {
             const margin = { top: 20, right: 30, bottom: 40, left: 40 };
@@ -104,7 +80,7 @@
                 .attr('y', d => y(d.r2))
                 .attr('width', x.bandwidth())
                 .attr('height', d => height - y(d.r2))
-                .style('fill', d => colorScale(d.modelType));
+                .style('fill', d => colorScale(d.model_type));
 
             svg.append('g')
                 .attr('class', 'x-axis')
@@ -116,26 +92,32 @@
                 .call(d3.axisLeft(y));
         }
 
-        // Update model details section
-        function showModelDetails(model) {
+        // Update model details section for all top 20 models
+        function showModelDetails(models) {
             const detailsSection = d3.select('#modelDetails');
-            detailsSection.html(`
-                <div class="model-title">${model.rank} - ${model.modelType} Model</div>
-                <div><strong>Target Variable:</strong> ${model.targetVariable}</div>
-                <div><strong>Independent Variables:</strong> ${model.independentVariables}</div>
-                <div><strong>Formula:</strong> ${model.formula}</div>
-                <div><strong>R²:</strong> ${model.r2}</div>
-                <div><strong>NSE:</strong> ${model.nse}</div>
-                <div><strong>RMSE:</strong> ${model.rmse}</div>
-                <div><strong>CPI:</strong> ${model.cpi}</div>
-            `);
+            detailsSection.html(""); // Clear previous details
+
+            models.forEach((model) => {
+                detailsSection.append('div')
+                    .attr('class', 'model-details')
+                    .html(`
+                        <div class="model-title">${model.rank} - ${model.model_type} Model</div>
+                        <div><strong>Target Variable:</strong> ${model.target_variable}</div>
+                        <div><strong>Independent Variables:</strong> ${model.independent_variables}</div>
+                        <div><strong>Formula:</strong> ${model.formula}</div>
+                        <div><strong>R²:</strong> ${model.r2}</div>
+                        <div><strong>NSE:</strong> ${model.nse}</div>
+                        <div><strong>RMSE:</strong> ${model.rmse}</div>
+                        <div><strong>CPI:</strong> ${model.cpi}</div>
+                    `);
+            });
         }
 
         // Create the chart with top 20 models (use slice to limit to top 20)
         createBarChart(models.slice(0, 20), '#performanceChart', 'Top 20 Models Sorted by CPI');
 
-        // Display details for the first model as an example
-        showModelDetails(models[0]);
+        // Display details for all top 20 models
+        showModelDetails(models.slice(0, 20));
     </script>
 </body>
 </html>

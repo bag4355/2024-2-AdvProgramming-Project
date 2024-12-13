@@ -46,11 +46,20 @@ def index():
     # XML 데이터 읽어오기
     models = parse_xml()
     
-    # 모델 상세 정보를 상위 20개만 추출
-    top_20_models = models[:20]
+    # 모델 번호 추가
+    for index, model in enumerate(models[:20]):
+        if index == 0:
+            model['rank'] = f"{model['name']}_1st"
+        elif index == 1:
+            model['rank'] = f"{model['name']}_2nd"
+        elif index == 2:
+            model['rank'] = f"{model['name']}_3rd"
+        else:
+            model['rank'] = f"{model['name']}_{index + 1}th"
     
     # 상위 20개 모델을 HTML로 전달
-    return render_template('index.html', models=top_20_models)
+    return render_template('index.html', models=models[:20])
 
 if __name__ == '__main__':
     app.run(debug=True)
+
