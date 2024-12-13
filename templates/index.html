@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Top 20 Models Sorted by CPI</title>
+    <title>Model Performance Visualization</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body {
@@ -44,6 +44,22 @@
         // Flask에서 전달된 모델 데이터를 받기
         const models = {{ models | tojson }};
         
+        // Sort models based on CPI (lowest first)
+        models.sort((a, b) => a.cpi - b.cpi);  // CPI 기준으로 오름차순 정렬
+
+        // Add model ranks (1st, 2nd, etc.)
+        models.slice(0, 20).forEach((model, index) => {
+            if (index === 0) {
+                model.rank = `${model.name}_${index + 1}st`;
+            } else if (index === 1) {
+                model.rank = `${model.name}_${index + 1}nd`;
+            } else if (index === 2) {
+                model.rank = `${model.name}_${index + 1}rd`;
+            } else {
+                model.rank = `${model.name}_${index + 1}th`;
+            }
+        });
+
         // Function to create bar charts
         function createBarChart(data, chartId, title) {
             const margin = { top: 20, right: 30, bottom: 40, left: 40 };
@@ -86,6 +102,11 @@
                 .attr('class', 'x-axis')
                 .attr('transform', `translate(0,${height})`)
                 .call(d3.axisBottom(x).tickSize(0));
+
+            // Rotate x-axis labels to be vertical
+            svg.selectAll('.x-axis text')
+                .style("text-anchor", "middle")
+                .attr("transform", "rotate(-90)");  // x축 글씨를 세로로 변환
 
             svg.append('g')
                 .attr('class', 'y-axis')
