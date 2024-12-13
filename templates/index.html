@@ -19,10 +19,17 @@
         }
         .model-info {
             margin: 20px;
+            font-size: 14px;
         }
         .model-title {
             font-size: 18px;
             font-weight: bold;
+        }
+        .model-details {
+            margin-top: 10px;
+        }
+        .model-details p {
+            margin: 5px 0;
         }
     </style>
 </head>
@@ -30,58 +37,32 @@
     <h1>Model Performance Comparison</h1>
     
     <!-- Area to show the charts -->
-    <div id="r2Chart" class="chart"></div>
-    <div id="nseChart" class="chart"></div>
-    <div id="rmseChart" class="chart"></div>
-    <div id="cpiChart" class="chart"></div>
+    <div id="performanceChart" class="chart"></div>
+    <div id="modelDetails" class="model-info"></div>
 
     <script>
-        // Load the XML data dynamically using the provided path
-        d3.xml("{{ url_for('static', filename='model_results.xml') }}").then(function(xml) {
-            // Extract models from XML
-            let models = Array.from(xml.querySelectorAll('model')).map(function(modelElement) {
-                return {
-                    name: modelElement.getAttribute('name'),
-                    targetVariable: modelElement.querySelector('Target_Variable').textContent,
-                    independentVariables: modelElement.querySelector('Independent_Variables').textContent,
-                    modelType: modelElement.querySelector('Model_Type').textContent,
-                    r2: parseFloat(modelElement.querySelector('R2').textContent),
-                    nse: parseFloat(modelElement.querySelector('NSE').textContent),
-                    rmse: parseFloat(modelElement.querySelector('RMSE').textContent),
-                    cpi: parseFloat(modelElement.querySelector('CPI').textContent),
-                    cpiRank: parseInt(modelElement.querySelector('CPI_Rank').textContent),
-                    n: parseInt(modelElement.querySelector('n').textContent),
-                    formula: modelElement.querySelector('Formula').textContent
-                };
-            });
-
-            // Create the charts for R², NSE, RMSE, and CPI
-            createBarChart(models, 'r2', '#r2Chart', 'R² (Model Fit)');
-            createBarChart(models, 'nse', '#nseChart', 'NSE (Nash-Sutcliffe Efficiency)');
-            createBarChart(models, 'rmse', '#rmseChart', 'RMSE (Root Mean Squared Error)');
-            createBarChart(models, 'cpi', '#cpiChart', 'CPI (Correlation Performance Index)');
-
-            // Display model information
-            models.forEach(function(model) {
-                d3.select('body').append('div')
-                    .attr('class', 'model-info')
-                    .html(`
-                        <div class="model-title">${model.name} - ${model.modelType} Model</div>
-                        <div><strong>Target Variable:</strong> ${model.targetVariable}</div>
-                        <div><strong>Independent Variables:</strong> ${model.independentVariables}</div>
-                        <div><strong>Formula:</strong> ${model.formula}</div>
-                    `);
-            });
-        });
+        // Sample data (you would replace this with actual data from your XML)
+        const models = [
+            {name: "Cubic", modelType: "Cubic", targetVariable: "Adada", independentVariables: "(Ajali, Imo)", r2: 0.978, nse: 0.90, rmse: 0.10, formula: "formula_expression_1"},
+            {name: "Cubic", modelType: "Cubic", targetVariable: "Adada", independentVariables: "(Ajali, Imo)", r2: 0.92, nse: 0.89, rmse: 0.15, formula: "formula_expression_2"},
+            {name: "Random Forest", modelType: "Random Forest", targetVariable: "Adada", independentVariables: "(Ajali, Imo, Otamiri)", r2: 0.87, nse: 0.84, rmse: 0.25, formula: "formula_expression_3"},
+            {name: "Random Forest", modelType: "Random Forest", targetVariable: "Adada", independentVariables: "(Ajali, Ivo)", r2: 0.80, nse: 0.77, rmse: 0.35, formula: "formula_expression_4"},
+            {name: "Quadratic", modelType: "Quadratic", targetVariable: "Adada", independentVariables: "(Imo, Otamiri)", r2: 0.91, nse: 0.88, rmse: 0.18, formula: "formula_expression_5"},
+            // Add more models as needed...
+        ];
 
         // Function to create bar charts
-        function createBarChart(data, metric, chartId, title) {
+        function createBarChart(data, chartId, title) {
             const margin = { top: 20, right: 30, bottom: 40, left: 40 };
             const width = 600 - margin.left - margin.right;
             const height = 400 - margin.top - margin.bottom;
 
-            const x = d3.scaleBand().domain(data.map(d => d.name)).range([0, width]).padding(0.1);
-            const y = d3.scaleLinear().domain([0, d3.max(data, d => d[metric])]).nice().range([height, 0]);
+            const x = d3.scaleBand().domain(data.map(d => d.name + " " + d.modelType)).range([0, width]).padding(0.1);
+            const y = d3.scaleLinear().domain([0, d3.max(data, d => d.r2)]).nice().range([height, 0]);
+
+            const colorScale = d3.scaleOrdinal()
+                .domain(["Cubic", "Random Forest", "Quadratic"])
+                .range(["red", "blue", "green"]); // Different colors for different model types
 
             const svg = d3.select(chartId)
                 .append('svg')
@@ -102,11 +83,11 @@
                 .enter()
                 .append('rect')
                 .attr('class', 'bar')
-                .attr('x', d => x(d.name))
-                .attr('y', d => y(d[metric]))
+                .attr('x', d => x(d.name + " " + d.modelType))
+                .attr('y', d => y(d.r2))
                 .attr('width', x.bandwidth())
-                .attr('height', d => height - y(d[metric]))
-                .style('fill', 'steelblue');
+                .attr('height', d => height - y(d.r2))
+                .style('fill', d => colorScale(d.modelType));
 
             svg.append('g')
                 .attr('class', 'x-axis')
@@ -117,6 +98,26 @@
                 .attr('class', 'y-axis')
                 .call(d3.axisLeft(y));
         }
+
+        // Update model details section
+        function showModelDetails(model) {
+            const detailsSection = d3.select('#modelDetails');
+            detailsSection.html(`
+                <div class="model-title">${model.name} - ${model.modelType} Model</div>
+                <div><strong>Target Variable:</strong> ${model.targetVariable}</div>
+                <div><strong>Independent Variables:</strong> ${model.independentVariables}</div>
+                <div><strong>Formula:</strong> ${model.formula}</div>
+                <div><strong>R²:</strong> ${model.r2}</div>
+                <div><strong>NSE:</strong> ${model.nse}</div>
+                <div><strong>RMSE:</strong> ${model.rmse}</div>
+            `);
+        }
+
+        // Create the chart with top 20 models (use slice to limit to top 20)
+        createBarChart(models.slice(0, 20), '#performanceChart', 'Model Performance (Top 20)');
+
+        // Display details for the first model as an example
+        showModelDetails(models[0]);
     </script>
 </body>
 </html>
