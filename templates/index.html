@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Performance Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        .chart {
+            width: 600px;
+            height: 400px;
+            margin: 50px auto;
+        }
+        .model-info {
+            margin: 20px;
+        }
+        .model-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Model Performance Comparison</h1>
+    
+    <!-- Area to show the charts -->
+    <div id="r2Chart" class="chart"></div>
+    <div id="nseChart" class="chart"></div>
+    <div id="rmseChart" class="chart"></div>
+    <div id="cpiChart" class="chart"></div>
+
+    <script>
+        // Load the XML data dynamically using the provided path
+        d3.xml("{{ url_for('static', filename='model_results.xml') }}").then(function(xml) {
+            // Extract models from XML
+            let models = Array.from(xml.querySelectorAll('model')).map(function(modelElement) {
+                return {
+                    name: modelElement.getAttribute('name'),
+                    targetVariable: modelElement.querySelector('Target_Variable').textContent,
+                    independentVariables: modelElement.querySelector('Independent_Variables').textContent,
+                    modelType: modelElement.querySelector('Model_Type').textContent,
+                    r2: parseFloat(modelElement.querySelector('R2').textContent),
+                    nse: parseFloat(modelElement.querySelector('NSE').textContent),
+                    rmse: parseFloat(modelElement.querySelector('RMSE').textContent),
+                    cpi: parseFloat(modelElement.querySelector('CPI').textContent),
+                    cpiRank: parseInt(modelElement.querySelector('CPI_Rank').textContent),
+                    n: parseInt(modelElement.querySelector('n').textContent),
+                    formula: modelElement.querySelector('Formula').textContent
+                };
+            });
+
+            // Create the charts for R², NSE, RMSE, and CPI
+            createBarChart(models, 'r2', '#r2Chart', 'R² (Model Fit)');
+            createBarChart(models, 'nse', '#nseChart', 'NSE (Nash-Sutcliffe Efficiency)');
+            createBarChart(models, 'rmse', '#rmseChart', 'RMSE (Root Mean Squared Error)');
+            createBarChart(models, 'cpi', '#cpiChart', 'CPI (Correlation Performance Index)');
+
+            // Display model information
+            models.forEach(function(model) {
+                d3.select('body').append('div')
+                    .attr('class', 'model-info')
+                    .html(`
+                        <div class="model-title">${model.name} - ${model.modelType} Model</div>
+                        <div><strong>Target Variable:</strong> ${model.targetVariable}</div>
+                        <div><strong>Independent Variables:</strong> ${model.independentVariables}</div>
+                        <div><strong>Formula:</strong> ${model.formula}</div>
+                    `);
+            });
+        });
+
+        // Function to create bar charts
+        function createBarChart(data, metric, chartId, title) {
+            const margin = { top: 20, right: 30, bottom: 40, left: 40 };
+            const width = 600 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+
+            const x = d3.scaleBand().domain(data.map(d => d.name)).range([0, width]).padding(0.1);
+            const y = d3.scaleLinear().domain([0, d3.max(data, d => d[metric])]).nice().range([height, 0]);
+
+            const svg = d3.select(chartId)
+                .append('svg')
+                .attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom)
+                .append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            svg.append('text')
+                .attr('x', width / 2)
+                .attr('y', -10)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '16px')
+                .text(title);
+
+            svg.selectAll('.bar')
+                .data(data)
+                .enter()
+                .append('rect')
+                .attr('class', 'bar')
+                .attr('x', d => x(d.name))
+                .attr('y', d => y(d[metric]))
+                .attr('width', x.bandwidth())
+                .attr('height', d => height - y(d[metric]))
+                .style('fill', 'steelblue');
+
+            svg.append('g')
+                .attr('class', 'x-axis')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x).tickSize(0));
+
+            svg.append('g')
+                .attr('class', 'y-axis')
+                .call(d3.axisLeft(y));
+        }
+    </script>
+</body>
+</html>
